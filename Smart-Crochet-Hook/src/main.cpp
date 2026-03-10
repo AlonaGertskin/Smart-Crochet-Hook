@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <Wire.h>
-
+#include <MPU9250.h>
 #define MPU_ADDR 0x69
+MPU9250 mpu;
+
 const unsigned long INTERVAL_US = 20000; // 20,000 microseconds = 20ms (50Hz)
 unsigned long nextSampleMicros = 0;
 
@@ -13,6 +15,13 @@ void setup() {
   Wire.beginTransmission(MPU_ADDR);
   Wire.write(0x6B); 
   Wire.write(0x00); 
+  Wire.endTransmission();
+
+  // Set Gyro Range to 2000DPS
+  // The value 0x18  sets the FS_SEL bits to 3 (2000DPS)
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x1B); 
+  Wire.write(0x18); 
   Wire.endTransmission();
   
   nextSampleMicros = micros();
