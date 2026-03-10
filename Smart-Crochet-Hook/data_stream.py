@@ -2,51 +2,68 @@ import serial
 import time
 import csv
 import os
+import threading
 
 # --- CONFIGURATION ---
 PORT = 'COM3' 
 BAUD = 115200
 FOLDER = "stitch_tests"
 
-# Create the folder if it doesn't exist
 if not os.path.exists(FOLDER):
     os.makedirs(FOLDER)
 
 def record_session(ser):
-    stitch_type = input("\n🧶 Enter stitch type (e.g., sc, dc, baseline): ").strip().lower()
-    duration = float(input("⏱️  Enter duration in seconds (e.g., 3): "))
+    stitch_type = input("\n🧶 Stitch type (sc, dc, baseline): ").strip().lower()
+    stitch_count = int(input("🔢 How many stitches are you about to do? "))
     
-    print(f"\nReady? Get into position for '{stitch_type}'...")
+    print(f"\nPreparation: Get ready for {stitch_count} {stitch_type}(s)...")
+    input("Press [ENTER] to start the 3-second countdown...")
+    
     for i in range(3, 0, -1):
         print(f"{i}...")
         time.sleep(1)
     
-    # Generate filename with a unique timestamp
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    filename = os.path.join(FOLDER, f"{stitch_type}_{timestamp}.csv")
+    print("⏺️  RECORDING... (Press [ENTER] to stop when finished)")
     
-    print("⏺️  RECORDING...")
+    # Clear the buffer so we start with fresh data
     ser.reset_input_buffer()
     
     samples = []
+    stop_event = threading.Event()
+
+    def wait_for_user():
+        input()
+        stop_event.set()
+
+    # Start the "Stop Monitor" thread
+    input_thread = threading.Thread(target=wait_for_user)
+    input_thread.daemon = True
+    input_thread.start()
+
     start_time = time.time()
     
-    while (time.time() - start_time) < duration:
+    # Keep reading until the user hits Enter
+    while not stop_event.is_set():
         line = ser.readline().decode('utf-8', errors='ignore').strip()
         if line:
             parts = line.split(',')
             if len(parts) == 7:
                 samples.append(parts)
+
+    duration = time.time() - start_time
+    print(f"🛑 STOP! Recorded {duration:.2f} seconds.")
     
-    print("🛑 STOP!")
+    # Save the file
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    filename = os.path.join(FOLDER, f"{stitch_type}_x{stitch_count}_{timestamp}.csv")
     
-    # Save to CSV
     with open(filename, "w", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(["ms", "ax", "ay", "az", "gx", "gy", "gz"])
         writer.writerows(samples)
         
     print(f"✅ Saved {len(samples)} samples to {filename}")
+    print(f"📊 Avg samples per stitch: {len(samples)/stitch_count:.1f}")
 
 def main():
     try:
@@ -56,13 +73,10 @@ def main():
         
         while True:
             record_session(ser)
-            cont = input("\nRecord another take? (y/n): ").lower()
-            if cont != 'y':
+            if input("\nRecord another? (y/n): ").lower() != 'y':
                 break
                 
         ser.close()
-        print("\nSession finished. Happy crocheting! 🧶")
-
     except Exception as e:
         print(f"❌ Error: {e}")
 
