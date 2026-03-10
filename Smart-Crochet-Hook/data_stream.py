@@ -1,44 +1,67 @@
 import serial
 import time
 import csv
+import os
 
 # --- CONFIGURATION ---
-PORT = 'COM3'        # <--- Double check this in PlatformIO
+PORT = 'COM3' 
 BAUD = 115200
-FILE_NAME = "baseline_test.csv"
-RECORD_TIME = 5      # Seconds to record
+FOLDER = "stitch_tests"
+
+# Create the folder if it doesn't exist
+if not os.path.exists(FOLDER):
+    os.makedirs(FOLDER)
+
+def record_session(ser):
+    stitch_type = input("\n🧶 Enter stitch type (e.g., sc, dc, baseline): ").strip().lower()
+    duration = float(input("⏱️  Enter duration in seconds (e.g., 3): "))
+    
+    print(f"\nReady? Get into position for '{stitch_type}'...")
+    for i in range(3, 0, -1):
+        print(f"{i}...")
+        time.sleep(1)
+    
+    # Generate filename with a unique timestamp
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    filename = os.path.join(FOLDER, f"{stitch_type}_{timestamp}.csv")
+    
+    print("⏺️  RECORDING...")
+    ser.reset_input_buffer()
+    
+    samples = []
+    start_time = time.time()
+    
+    while (time.time() - start_time) < duration:
+        line = ser.readline().decode('utf-8', errors='ignore').strip()
+        if line:
+            parts = line.split(',')
+            if len(parts) == 7:
+                samples.append(parts)
+    
+    print("🛑 STOP!")
+    
+    # Save to CSV
+    with open(filename, "w", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(["ms", "ax", "ay", "az", "gx", "gy", "gz"])
+        writer.writerows(samples)
+        
+    print(f"✅ Saved {len(samples)} samples to {filename}")
 
 def main():
     try:
-        # Connect to the Smart Hook
-        # Note: Ensure PlatformIO Serial Monitor is CLOSED before running this
         ser = serial.Serial(PORT, BAUD, timeout=1)
-        time.sleep(2)  # Give the ESP32 a moment to wake up
-        ser.reset_input_buffer()
+        time.sleep(2)
+        print(f"📡 Hook connected on {PORT}")
         
-        print(f"📡 Connected to Hook on {PORT}")
-        print(f"⏺️  Recording {RECORD_TIME}s of data to '{FILE_NAME}'...")
-
-        with open(FILE_NAME, "w", newline='') as f:
-            writer = csv.writer(f)
-            # Write the header
-            writer.writerow(["ms", "ax", "ay", "az", "gx", "gy", "gz"])
-            
-            start_time = time.time()
-            count = 0
-            
-            while (time.time() - start_time) < RECORD_TIME:
-                line = ser.readline().decode('utf-8', errors='ignore').strip()
+        while True:
+            record_session(ser)
+            cont = input("\nRecord another take? (y/n): ").lower()
+            if cont != 'y':
+                break
                 
-                if line:
-                    parts = line.split(',')
-                    # Verification: Only save if we have all 7 columns
-                    if len(parts) == 7:
-                        writer.writerow(parts)
-                        count += 1
-
-        print(f"✅ Success! Captured {count} samples.")
         ser.close()
+        print("\nSession finished. Happy crocheting! 🧶")
 
     except Exception as e:
         print(f"❌ Error: {e}")
