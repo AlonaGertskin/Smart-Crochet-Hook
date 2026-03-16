@@ -7,22 +7,20 @@ MPU9250 mpu;
 const unsigned long INTERVAL_US = 20000; // 20,000 microseconds = 20ms (50Hz)
 unsigned long nextSampleMicros = 0;
 
+// Function to write a single byte to a specific MPU register
+void writeRegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(reg);   // The register address
+  Wire.write(value); // The data to put in that register
+  Wire.endTransmission();
+}
+
 void setup() {
   Serial.begin(115200);
   Wire.begin(8, 9);
   
-  // Minimal Setup to wake the MPU (Assuming your previous init logic)
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x6B); 
-  Wire.write(0x00); 
-  Wire.endTransmission();
-
-  // Set Gyro Range to 2000DPS
-  // The value 0x18  sets the FS_SEL bits to 3 (2000DPS)
-  Wire.beginTransmission(MPU_ADDR);
-  Wire.write(0x1B); 
-  Wire.write(0x18); 
-  Wire.endTransmission();
+  writeRegister(0x6B, 0x00); // Wake up the MPU
+  writeRegister(0x1B, 0x18); // Set Gyro config (±2000 dps)
   
   nextSampleMicros = micros();
 }
