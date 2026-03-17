@@ -2,11 +2,16 @@
 #include <Wire.h>
 #include <MPU9250.h>
 #include "config.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 MPU9250 mpu;
-unsigned long nextSampleMicros = 0;
-//send a packet for agreeing on the struct size and alignment between the ESP32 and the Python receiver
 HookPacket currentPacket;
+SemaphoreHandle_t timerSemaphore;
+
+unsigned long nextSampleMicros = 0;
+//TODO send a packet for agreeing on the struct size and alignment between the ESP32 and the Python receiver
+// also add header in the packet
 
 // Function to write a single byte to a specific MPU register
 void writeRegister(uint8_t reg, uint8_t value, bool sendStop = true) {
@@ -21,6 +26,17 @@ void writeRegister(uint8_t reg, uint8_t value, bool sendStop = true) {
 // Helper function to read two bytes and combine them into a 16-bit integer
 int16_t read16Bit() {
   return (Wire.read() << 8) | Wire.read();
+}
+
+// --- Timer Interrupt Service Routine (ISR) ---
+// This function runs in the "Interrupt Context"
+// TODO: check if IRAM_ATTR is needed
+// IRAM_ATTR is a special compiler attribute used in ESP32 programming. 
+// It tells the internal linker: "Do not keep this function in the Flash memory; 
+//move it into the Internal RAM (Static RAM) instead." 
+void IRAM_ATTR onTimer(void* arg) {
+  // Give the semaphore to unblock the loop
+  xSemaphoreGiveFromISR(timerSemaphore, NULL);
 }
 
 void readMotion(HookPacket &p) {
@@ -43,6 +59,10 @@ void readMotion(HookPacket &p) {
 void setup() {
   Serial.begin(COMM_SPEED);
   Wire.begin(SDA_PIN, SCL_PIN);  
+  // initialize the timer semaphore
+  timerSemaphore = xSemaphoreCreateBinary();
+
+  // MPU9250 Library Setup
   MPU9250Setting setting = {};
   if (!mpu.setup(MPU_ADDR, setting)) {
           while (1) {
@@ -52,12 +72,26 @@ void setup() {
         }
   Serial.println("✅ Sensor Online and Configured!");
   nextSampleMicros = micros();
+
+  // Configure Hardware Timer
+  const esp_timer_create_args_t timer_args = {
+    .callback = &onTimer,
+    .name = "sample_trigger"
+  };
+
+  esp_timer_handle_t timer_handle;
+  esp_timer_create(&timer_args, &timer_handle);
+  
+  // Start periodic timer
+  esp_timer_start_periodic(timer_handle, SAMPLE_PERIOD_US);
+
+  Serial.println("✅ RTOS Timer System Active");
 } 
 
 void loop() {
-  // Wait until it's time for the next sample
-  if (micros() >= nextSampleMicros) {
-    nextSampleMicros += INTERVAL_US;
+  // Wait here forever until the timer "Gives" the semaphore.
+  // This uses 0% CPU while waiting.
+  if (xSemaphoreTake(timerSemaphore, portMAX_DELAY) == pdTRUE) {
 
  // Capture all data into the packet
   readMotion(currentPacket);

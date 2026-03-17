@@ -11,7 +11,7 @@
 #define MPU_DATA_LEN 14
 
 // --- TIMING SETTINGS ---
-const uint32_t INTERVAL_US = 20000; // 20ms (50Hz)
+const uint32_t SAMPLE_PERIOD_US = 20000; // 20ms (50Hz)
 
 // --- DATA STRUCTURES ---
 // We use __attribute__((packed)) to ensure NO hidden padding bytes
