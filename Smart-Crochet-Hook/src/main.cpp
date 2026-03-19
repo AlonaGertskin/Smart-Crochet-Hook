@@ -9,7 +9,6 @@ MPU9250 mpu;
 HookPacket currentPacket;
 SemaphoreHandle_t timerSemaphore;
 
-unsigned long nextSampleMicros = 0;
 //TODO send a packet for agreeing on the struct size and alignment between the ESP32 and the Python receiver
 // also add header in the packet
 
@@ -19,7 +18,7 @@ void writeRegister(uint8_t reg, uint8_t value, bool sendStop = true) {
   Wire.write(reg);   // The register address
   if (sendStop) { // If we are just preparing a read, we don't  need to write a value
     Wire.write(value);// The data to put in that register
-  }; 
+  }
   Wire.endTransmission(sendStop); // releases the bus after transmission
 }
 
@@ -42,7 +41,7 @@ void IRAM_ATTR onTimer(void* arg) {
 void readMotion(HookPacket &p) {
   writeRegister(ACCEL_XOUT_H, 0, false);
   Wire.requestFrom(MPU_ADDR, MPU_DATA_LEN);
-  
+  p.header = PACKET_HEADER;
   p.timestamp = millis(); // Capture the timestamp when reading the data
 // Accelerometer
   p.ax = read16Bit();
@@ -63,7 +62,7 @@ void setup() {
   timerSemaphore = xSemaphoreCreateBinary();
 
   // MPU9250 Library Setup
-  MPU9250Setting setting = {};
+  MPU9250Setting setting = {}; // {} deletes defaults??
   if (!mpu.setup(MPU_ADDR, setting)) {
           while (1) {
               Serial.println("❌ ERROR: Sensor not found.");
@@ -71,7 +70,11 @@ void setup() {
           }
         }
   Serial.println("✅ Sensor Online and Configured!");
-  nextSampleMicros = micros();
+
+  // Send the Handshake Info Packet
+  InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
+  Serial.write((uint8_t*)&info, sizeof(info));
+  Serial.flush(); // Ensure it's sent before stream starts
 
   // Configure Hardware Timer
   const esp_timer_create_args_t timer_args = {
