@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include <MPU9250.h>
 // --- DEFINITIONS ---
-#define MPU_ADDR 0x69
+#define MPU_ADDR 0x68
 #define SDA_PIN 8
 #define SCL_PIN 9
 // Registers
