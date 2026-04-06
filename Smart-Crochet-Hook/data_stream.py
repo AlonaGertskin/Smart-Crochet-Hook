@@ -4,6 +4,7 @@ import csv
 import os
 import threading
 import struct
+import receiver
 
 # --- CONFIGURATION ---
 PORT = 'COM3' 
@@ -13,7 +14,7 @@ FOLDER = "stitch_tests"
 if not os.path.exists(FOLDER):
     os.makedirs(FOLDER)
 
-def record_session(ser):
+def record_session(hook):
     stitch_type = input("\n🧶 Stitch type (sc, dc, baseline): ").strip().lower()
     stitch_count = int(input("🔢 How many stitches are you about to do? "))
     
@@ -27,7 +28,7 @@ def record_session(ser):
     print("⏺️  RECORDING... (Press [ENTER] to stop when finished)")
     
     # Clear the buffer so we start with fresh data
-    ser.reset_input_buffer()
+    #ser.reset_input_buffer()
     
     samples = []
     stop_event = threading.Event()
@@ -45,10 +46,9 @@ def record_session(ser):
     
     # Keep reading until the user hits Enter
     while not stop_event.is_set():
-            chunk = ser.read(16) 
-            if len(chunk) == 16:
-                data = struct.unpack('<L hhhhhh', chunk)
-                samples.append(data)
+        packet = hook.get_packet()
+        if packet:
+            samples.append(packet)
 
     duration = time.time() - start_time
     print(f"🛑 STOP! Recorded {duration:.2f} seconds.")
@@ -67,16 +67,17 @@ def record_session(ser):
 
 def main():
     try:
-        ser = serial.Serial(PORT, BAUD, timeout=1)
+        hook = receiver.HookReceiver(PORT, BAUD)
+
+        #ser = serial.Serial(PORT, BAUD, timeout=1)
         time.sleep(2)
         print(f"📡 Hook connected on {PORT}")
-        
         while True:
-            record_session(ser)
+            record_session(hook)
             if input("\nRecord another? (y/n): ").lower() != 'y':
                 break
                 
-        ser.close()
+        hook.close()
     except Exception as e:
         print(f"❌ Error: {e}")
 
