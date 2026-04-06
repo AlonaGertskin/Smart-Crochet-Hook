@@ -16,3 +16,22 @@
 
 const unsigned long INTERVAL_US = 20000; // 20,000 microseconds = 20ms (50Hz)
 unsigned long nextSampleMicros = 0;
+
+// --- DATA STRUCTURES ---
+// We use __attribute__((packed)) to ensure NO hidden padding bytes
+// are added by the compiler, matching the Python receiver perfectly.
+// to keep alignment and avoid padding issues, use aligned types in the struct ie. char and then int32_t instead of int16_t
+// Sent ONCE at startup
+
+// struct __attribute__((packed)) InfoPacket {
+//   uint16_t metadataHeader; // 0xBB66
+//   uint16_t packetSize;     // sizeof(HookPacket)
+//   uint16_t sampleRateHz;   // 50
+// };
+
+struct __attribute__((packed)) HookPacket {
+  // uint16_t header;    // 0xAA55
+  uint32_t timestamp; // 4 bytes
+  int16_t ax, ay, az; // 6 bytes
+  int16_t gx, gy, gz; // 6 bytes
+};
