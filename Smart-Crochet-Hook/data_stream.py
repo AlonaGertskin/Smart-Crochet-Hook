@@ -3,6 +3,7 @@ import time
 import csv
 import os
 import threading
+import struct
 
 # --- CONFIGURATION ---
 PORT = 'COM3' 
@@ -44,11 +45,10 @@ def record_session(ser):
     
     # Keep reading until the user hits Enter
     while not stop_event.is_set():
-        line = ser.readline().decode('utf-8', errors='ignore').strip()
-        if line:
-            parts = line.split(',')
-            if len(parts) == 7:
-                samples.append(parts)
+            chunk = ser.read(16) 
+            if len(chunk) == 16:
+                data = struct.unpack('<L hhhhhh', chunk)
+                samples.append(data)
 
     duration = time.time() - start_time
     print(f"🛑 STOP! Recorded {duration:.2f} seconds.")

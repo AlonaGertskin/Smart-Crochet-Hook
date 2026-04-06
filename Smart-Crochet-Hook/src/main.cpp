@@ -53,14 +53,7 @@ void loop() {
 
     readMotion(currentPacket);
 
-    // Stream as clean CSV
     // Format: ax,ay,az,gx,gy,gz
-    Serial.print(millis()); Serial.print(",");
-    Serial.print(currentPacket.ax); Serial.print(",");
-    Serial.print(currentPacket.ay); Serial.print(",");
-    Serial.print(currentPacket.az); Serial.print(",");
-    Serial.print(currentPacket.gx); Serial.print(",");
-    Serial.print(currentPacket.gy); Serial.print(",");
-    Serial.println(currentPacket.gz);
+    Serial.write((uint8_t*)&currentPacket, sizeof(currentPacket));
   }
 }
