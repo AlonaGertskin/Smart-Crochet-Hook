@@ -1,9 +1,7 @@
-import serial
 import time
 import csv
 import os
 import threading
-import struct
 import receiver
 
 # --- CONFIGURATION ---
@@ -68,9 +66,11 @@ def record_session(hook):
 def main():
     try:
         hook = receiver.HookReceiver(PORT, BAUD)
-
-        #ser = serial.Serial(PORT, BAUD, timeout=1)
         time.sleep(2)
+        
+        # This sends the 's' and verifies the InfoPacket (0xBB66)
+        if not hook.sync_handshake(): return 
+
         print(f"📡 Hook connected on {PORT}")
         while True:
             record_session(hook)
