@@ -23,7 +23,7 @@ int16_t read16Bit() {
 void readMotion(HookPacket &p) {
   writeRegister(ACCEL_XOUT_H, 0, false);
   Wire.requestFrom(MPU_ADDR, MPU_DATA_LEN);
-  //p.header = PACKET_HEADER;
+  p.header = PACKET_HEADER;
   p.timestamp = millis(); // Capture the timestamp when reading the data
 // Accelerometer
   p.ax = read16Bit();
@@ -42,7 +42,16 @@ void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);  
   writeRegister(REG_PWR_MGMT_1, 0x00); // Wake up the MPU
   writeRegister(REG_GYRO_CONFIG, GYRO_FULL_SCALE_2000DPS); // Set Gyro config (±2000 dps)
-  
+  // WAIT FOR PYTHON
+  while (Serial.available() <= 0) {
+    delay(10); // Do nothing until Python sends a byte
+  }
+  Serial.read(); // Clear the 's' from the buffer
+  // Send the Handshake Info Packet
+  InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
+  Serial.write((uint8_t*)&info, sizeof(info));
+  Serial.flush(); // Ensure it's sent before stream starts
+
   nextSampleMicros = micros();
 }
 
@@ -54,6 +63,7 @@ void loop() {
     readMotion(currentPacket);
 
     // Format: ax,ay,az,gx,gy,gz
-    Serial.write((uint8_t*)&currentPacket, sizeof(currentPacket));
+    //Serial.write((uint8_t*)&currentPacket, sizeof(currentPacket));
+
   }
 }
