@@ -65,7 +65,7 @@ class HookReceiver:
         self.ser.close()
         
 if __name__ == "__main__":
-    PORT = "COM3"  # Update this to your actual port
+    PORT = "COM3" 
     BAUD = 115200
     
     hook = HookReceiver(PORT, BAUD)
