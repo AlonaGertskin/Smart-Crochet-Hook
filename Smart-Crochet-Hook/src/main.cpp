@@ -4,6 +4,7 @@
 #include "config.h"
 
 HookPacket currentPacket;
+uint32_t startTime = 0;
 
 // Function to write a single byte to a specific MPU register
 void writeRegister(uint8_t reg, uint8_t value, bool sendStop = true) {
@@ -47,6 +48,7 @@ void setup() {
     delay(10); // Do nothing until Python sends a byte
   }
   Serial.read(); // Clear the 's' from the buffer
+  startTime = millis(); // Record the start time for timestamping
   // Send the Handshake Info Packet
   InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
   Serial.write((uint8_t*)&info, sizeof(info));
@@ -63,7 +65,7 @@ void loop() {
     readMotion(currentPacket);
 
     // Format: ax,ay,az,gx,gy,gz
-    //Serial.write((uint8_t*)&currentPacket, sizeof(currentPacket));
+    Serial.write((uint8_t*)&currentPacket, sizeof(currentPacket));
 
   }
 }
