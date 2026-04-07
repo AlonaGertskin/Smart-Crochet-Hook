@@ -2,6 +2,7 @@ import time
 import csv
 import os
 import receiver
+import threading
 
 # --- CONFIGURATION ---
 PORT = 'COM3' 
@@ -25,24 +26,32 @@ def record_session(hook):
     print("⏺️  RECORDING... (Press [ENTER] to stop)")
     
     samples = []
+    stop_event = threading.Event()
+
+    # --- THE FIX: Threaded Input Listener ---
+    def wait_for_user():
+        input() # This blocks here until you hit Enter
+        stop_event.set() # Signal the loop to stop
+
+    # Start the "Stop Monitor" thread in the background
+    input_thread = threading.Thread(target=wait_for_user)
+    input_thread.daemon = True # Kill thread if main script exits
+    input_thread.start()
+
     start_time = time.time()
     
-    try:
-        while True:
-            packet = hook.get_packet()
-            if packet:
-                samples.append(packet)
-            
-            # Optional: provide a way to break, but for now, 
-            # let's just use Ctrl+C to keep the code simple and clean.
-            # (Or see the threaded version we had before)
-    except KeyboardInterrupt:
-        pass 
+    # Now the loop checks the 'stop_event' instead of 'True'
+    while not stop_event.is_set():
+        packet = hook.get_packet()
+        if packet:
+            samples.append(packet)
+        else:
+            # Prevent the CPU from spinning 100% when no data is ready
+            time.sleep(0.001) 
 
     duration = time.time() - start_time
     print(f"\n🛑 STOP! Recorded {duration:.2f} seconds.")
     
-    # --- FIX 2: Clean up the redundant saving logic ---
     if samples:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = os.path.join(FOLDER, f"{stitch_type}_x{stitch_count}_{timestamp}.csv")

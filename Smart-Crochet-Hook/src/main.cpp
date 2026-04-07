@@ -49,56 +49,37 @@ void IRAM_ATTR onTimer(void* arg) {
     xSemaphoreGiveFromISR(timerSemaphore, NULL);
 }
 
-void setup() {
+ void setup() {
   // Initialize Serial and I2C, then configure the MPU9250
   Serial.begin(COMM_SPEED);
-  Wire.begin(SDA_PIN, SCL_PIN); 
+  Wire.begin(SDA_PIN, SCL_PIN);  
   writeRegister(REG_PWR_MGMT_1, 0x00); // Wake up the MPU
-  writeRegister(REG_GYRO_CONFIG, GYRO_FULL_SCALE_2000DPS); // Set Gyro config (±2000 dps) 
-  // initialize the timer semaphore
+  writeRegister(REG_GYRO_CONFIG, GYRO_FULL_SCALE_2000DPS); // Set Gyro config (±2000 dps)
+  
+  // Set up the hardware timer to trigger every 20ms (50Hz)
   timerSemaphore = xSemaphoreCreateBinary();
 
-  // Send the Handshake Info Packet
-  InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
-  for(int i = 0; i < 20; i++) {
-      Serial.write((uint8_t*)&info, sizeof(info));
-      delay(100); 
-    }
-  Serial.flush(); // Ensure it's sent before stream starts
-
-  // Configure Hardware Timer
   const esp_timer_create_args_t timer_args = {
     .callback = &onTimer,
-    .name = "sample_trigger"
-  };
+    .name = "50hz"
+    };
 
   esp_timer_handle_t timer_handle;
   esp_timer_create(&timer_args, &timer_handle);
-  
-  // Set up the hardware timer to trigger every 20ms (50Hz)
-    timerSemaphore = xSemaphoreCreateBinary();
-    const esp_timer_create_args_t timer_args = {
-      .callback = &onTimer,
-      .name = "50hz" 
-      };
-    esp_timer_handle_t timer_handle;
-    esp_timer_create(&timer_args, &timer_handle);
-    esp_timer_start_periodic(timer_handle, 20000); 
+  esp_timer_start_periodic(timer_handle, 20000);
 
   // WAIT FOR PYTHON
   while (Serial.available() <= 0) {
     delay(10); // Do nothing until Python sends a byte
   }
-
   Serial.read(); // Clear the byte sent by Python to start the handshake
-  startTime = millis(); // Record the start time for timestamping
-  
+
   // Send the Handshake Info Packet
   InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
   Serial.write((uint8_t*)&info, sizeof(info));
   Serial.flush(); // Ensure it's sent before stream starts
 
-}
+} 
 
 void loop() {
   // This will now block (sleep) until the timer gives the semaphore
