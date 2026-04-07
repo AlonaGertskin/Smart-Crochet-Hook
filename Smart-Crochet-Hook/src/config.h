@@ -26,7 +26,6 @@ unsigned long nextSampleMicros = 0;
 // are added by the compiler, matching the Python receiver perfectly.
 // to keep alignment and avoid padding issues, use aligned types in the struct ie. char and then int32_t instead of int16_t
 // Sent ONCE at startup
-
 struct __attribute__((packed)) InfoPacket {
   uint16_t metadataHeader; // 0xBB66
   uint16_t packetSize;     // sizeof(HookPacket)

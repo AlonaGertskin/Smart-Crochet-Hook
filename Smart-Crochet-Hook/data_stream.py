@@ -1,7 +1,6 @@
 import time
 import csv
 import os
-import threading
 import receiver
 
 # --- CONFIGURATION ---
@@ -23,45 +22,40 @@ def record_session(hook):
         print(f"{i}...")
         time.sleep(1)
     
-    print("⏺️  RECORDING... (Press [ENTER] to stop when finished)")
-    
-    # Clear the buffer so we start with fresh data
-    #ser.reset_input_buffer()
+    print("⏺️  RECORDING... (Press [ENTER] to stop)")
     
     samples = []
-    stop_event = threading.Event()
-
-    def wait_for_user():
-        input()
-        stop_event.set()
-
-    # Start the "Stop Monitor" thread
-    input_thread = threading.Thread(target=wait_for_user)
-    input_thread.daemon = True
-    input_thread.start()
-
     start_time = time.time()
     
-    # Keep reading until the user hits Enter
-    while not stop_event.is_set():
-        packet = hook.get_packet()
-        if packet:
-            samples.append(packet)
+    try:
+        while True:
+            packet = hook.get_packet()
+            if packet:
+                samples.append(packet)
+            
+            # Optional: provide a way to break, but for now, 
+            # let's just use Ctrl+C to keep the code simple and clean.
+            # (Or see the threaded version we had before)
+    except KeyboardInterrupt:
+        pass 
 
     duration = time.time() - start_time
-    print(f"🛑 STOP! Recorded {duration:.2f} seconds.")
+    print(f"\n🛑 STOP! Recorded {duration:.2f} seconds.")
     
-    # Save the file
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    filename = os.path.join(FOLDER, f"{stitch_type}_x{stitch_count}_{timestamp}.csv")
-    
-    with open(filename, "w", newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(["ms", "ax", "ay", "az", "gx", "gy", "gz"])
-        writer.writerows(samples)
+    # --- FIX 2: Clean up the redundant saving logic ---
+    if samples:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        filename = os.path.join(FOLDER, f"{stitch_type}_x{stitch_count}_{timestamp}.csv")
         
-    print(f"✅ Saved {len(samples)} samples to {filename}")
-    print(f"📊 Avg samples per stitch: {len(samples)/stitch_count:.1f}")
+        with open(filename, "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["ms", "ax", "ay", "az", "gx", "gy", "gz"])
+            writer.writerows(samples)
+            
+        print(f"✅ Saved {len(samples)} samples to {filename}")
+        print(f"📊 Avg samples per stitch: {len(samples)/stitch_count:.1f}")
+    else:
+        print("⚠️ No data captured. Check your ESP32 connections.")
 
 def main():
     try:
