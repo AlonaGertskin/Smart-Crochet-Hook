@@ -19,6 +19,14 @@ void writeRegister(uint8_t reg, uint8_t value, bool sendStop = true) {
   Wire.endTransmission(sendStop); // releases the bus after transmission
 }
 
+void wakeup() {
+  // Initialize Serial and I2C, then configure the MPU9250
+  Serial.begin(COMM_SPEED);
+  Wire.begin(SDA_PIN, SCL_PIN);  
+  writeRegister(REG_PWR_MGMT_1, 0x00); // Wake up the MPU
+  writeRegister(REG_GYRO_CONFIG, GYRO_FULL_SCALE_2000DPS); // Set Gyro config (±2000 dps)
+}
+
 // Helper function to read two bytes and combine them into a 16-bit integer
 int16_t read16Bit() {
   return (Wire.read() << 8) | Wire.read();
@@ -50,11 +58,7 @@ void IRAM_ATTR onTimer(void* arg) {
 }
 
  void setup() {
-  // Initialize Serial and I2C, then configure the MPU9250
-  Serial.begin(COMM_SPEED);
-  Wire.begin(SDA_PIN, SCL_PIN);  
-  writeRegister(REG_PWR_MGMT_1, 0x00); // Wake up the MPU
-  writeRegister(REG_GYRO_CONFIG, GYRO_FULL_SCALE_2000DPS); // Set Gyro config (±2000 dps)
+  wakeup();
   
   // Set up the hardware timer to trigger every 20ms (50Hz)
   timerSemaphore = xSemaphoreCreateBinary();
