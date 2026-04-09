@@ -57,32 +57,39 @@ void IRAM_ATTR onTimer(void* arg) {
     xSemaphoreGiveFromISR(timerSemaphore, NULL);
 }
 
- void setup() {
-  wakeup();
-  
-  // Set up the hardware timer to trigger every 20ms (50Hz)
-  timerSemaphore = xSemaphoreCreateBinary();
-
-  const esp_timer_create_args_t timer_args = {
-    .callback = &onTimer,
-    .name = "50hz"
+void startSamplingTimer() {
+    const esp_timer_create_args_t timer_args = {
+        .callback = &onTimer,
+        .name = "50hz"
     };
 
-  esp_timer_handle_t timer_handle;
-  esp_timer_create(&timer_args, &timer_handle);
-  esp_timer_start_periodic(timer_handle, 20000);
+    esp_timer_handle_t timer_handle;
+    esp_timer_create(&timer_args, &timer_handle);
+    esp_timer_start_periodic(timer_handle, 20000); // 50Hz
+}
 
-  // WAIT FOR PYTHON
-  while (Serial.available() <= 0) {
-    delay(10); // Do nothing until Python sends a byte
-  }
-  Serial.read(); // Clear the byte sent by Python to start the handshake
+void performHandshake() {
+    // Wait for Python to signal start
+    while (Serial.available() <= 0) {
+        delay(10);
+    }
+    Serial.read(); // Consume the 's' signal
 
-  // Send the Handshake Info Packet
-  InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
-  Serial.write((uint8_t*)&info, sizeof(info));
-  Serial.flush(); // Ensure it's sent before stream starts
+    startTime = millis(); // Start the timer for timestamps
 
+    // Send the Metadata
+    InfoPacket info = {METADATA_HEADER, sizeof(HookPacket), SAMPLE_RATE_HZ};
+    Serial.write((uint8_t*)&info, sizeof(info));
+    Serial.flush(); 
+}
+
+
+ void setup() {
+  wakeup();
+  // Set up the hardware timer to trigger every 20ms (50Hz)
+  timerSemaphore = xSemaphoreCreateBinary();
+  startSamplingTimer();
+  performHandshake();
 } 
 
 void loop() {
