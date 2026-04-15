@@ -23,12 +23,16 @@ def record_session(hook):
         print(f"{i}...")
         time.sleep(1)
     
+    # Clear any old "junk" in the buffer from before we were ready
+    hook.ser.reset_input_buffer() 
+    # Tell the ESP32 to start (or reset its timer)
+    hook.ser.write(b's')
+    
     print("⏺️  RECORDING... (Press [ENTER] to stop)")
     
     samples = []
     stop_event = threading.Event()
 
-    # --- THE FIX: Threaded Input Listener ---
     def wait_for_user():
         input() # This blocks here until you hit Enter
         stop_event.set() # Signal the loop to stop
