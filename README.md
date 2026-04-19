@@ -6,11 +6,11 @@ The Smart Crochet Hook is a hardware-software integration project designed to ca
 
 ## Features
 
-    High-Precision Sampling: Hardware-timed 50Hz data acquisition using FreeRTOS semaphores.
-    Binary Protocol: Custom-packed binary data format for efficient serial communication with zero padding.
-    Live Visualization: Integration with Teleplot (VS Code) for real-time motion graphing.
-    Stitch Analysis: Python-based spectrogram generation (STFT) and magnitude analysis to identify stitch "signatures".
-    Data Logging: Automated session recording saved to CSV for algorithm validation and signal analysis.
+- High-Precision Sampling: Hardware-timed 50Hz data acquisition using FreeRTOS semaphores.
+- Binary Protocol: Custom-packed binary data format for efficient serial communication with zero padding.
+- Live Visualization: Integration with Teleplot (VS Code) for real-time motion graphing.
+- Stitch Analysis: Python-based spectrogram generation (STFT) and magnitude analysis to identify stitch "signatures".
+- Data Logging: Automated session recording saved to CSV for algorithm validation and signal analysis.
 
 ## System Components
 
@@ -22,11 +22,11 @@ The Smart Crochet Hook is a hardware-software integration project designed to ca
 
 ## Repository Map
 
-    src/: Firmware source including register-level IMU configuration and timer-driven sampling.
-    receiver.py: Core driver for handling the serial handshake and packet unpacking.
-    data_stream.py: Utility for logging labeled motion sessions to CSV.
-    plot_stitch.py: Signal processing script for frequency-domain analysis.
-    live_plot.py: Real-time Teleplot streamer.
+src/: Firmware source including register-level IMU configuration and timer-driven sampling.
+receiver.py: Core driver for handling the serial handshake and packet unpacking.
+data_stream.py: Utility for logging labeled motion sessions to CSV.
+plot_stitch.py: Signal processing script for frequency-domain analysis.
+live_plot.py: Real-time Teleplot streamer.
 
 ## Installation
 1. Firmware Setup
